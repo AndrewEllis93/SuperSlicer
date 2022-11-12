@@ -5218,7 +5218,10 @@ Polyline GCode::travel_to(std::string &gcode, const Point &point, ExtrusionRole 
         }
 
         Point last_post_before_retract = this->last_pos();
-        gcode += this->retract();
+
+        bool no_lift_on_retract = travel.length() <= scale_(EXTRUDER_CONFIG_WITH_DEFAULT(retract_lift_before_travel, 0));
+        gcode += this->retract(false, no_lift_on_retract);
+
         // When "Wipe while retracting" is enabled, then extruder moves to another position, and travel from this position can cross perimeters.
         bool updated_first_pos = false;
         if (last_post_before_retract != this->last_pos() && can_avoid_cross_peri) {
@@ -5390,7 +5393,7 @@ bool GCode::can_cross_perimeter(const Polyline& travel, bool offset)
     return true;
 }
 
-std::string GCode::retract(bool toolchange)
+std::string GCode::retract(bool toolchange, bool inhibit_lift)
 {
     std::string gcode;
 
@@ -5428,7 +5431,7 @@ std::string GCode::retract(bool toolchange)
         else
             need_lift = true;
     }
-    if (need_lift)
+    if (need_lift && !inhibit_lift)
         gcode += m_writer.lift(this->m_layer_index);
 
     return gcode;
